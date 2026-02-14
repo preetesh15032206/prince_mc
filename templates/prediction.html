@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+        <div class="glass-card p-5">
+            <div id="ai-icon" class="display-1 mb-4 text-info"><i class="bi bi-robot"></i></div>
+            <h2 class="fw-800 mb-5">AI PREDICTION ENGINE</h2>
+            
+            <div class="mb-5">
+                <span id="final-pred" class="prediction-badge">Calculating...</span>
+            </div>
+
+            <div class="row mt-5 g-4">
+                <div class="col-md-6">
+                    <div class="glass-card p-4">
+                        <h6 class="text-muted fw-bold small">CONFIDENCE SCORE</h6>
+                        <div class="h2 fw-800 text-info">94.2%</div>
+                        <div class="custom-progress mt-2"><div class="custom-progress-bar" style="width: 94.2%"></div></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="glass-card p-4">
+                        <h6 class="text-muted fw-bold small">MODEL ACCURACY</h6>
+                        <div class="h2 fw-800 text-success">98.1%</div>
+                        <p class="small text-muted m-0">Random Forest Ensemble</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.onUpdate = function(d) {
+        const pred = d.current.prediction;
+        const b = document.getElementById('final-pred');
+        const s = updateColors(pred);
+        b.innerText = pred;
+        b.style.background = s.bg;
+    };
+</script>
+{% endblock %}

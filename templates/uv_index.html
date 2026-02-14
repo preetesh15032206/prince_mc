@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 text-center">
+        <div id="uv-main-container" class="glass-card p-5" style="transition: all 1s ease;">
+            <h6 class="text-muted fw-bold mb-4">RADIATION INDEX (UV)</h6>
+            <div class="display-1 fw-800 mb-2" id="uv-large">--</div>
+            <div id="uv-risk-badge" class="d-inline-block px-5 py-3 rounded-pill h3 fw-800 mb-5">CONNECTING...</div>
+            
+            <div class="row text-start mt-5">
+                <div class="col-md-6">
+                    <h6 class="text-muted fw-bold">HEALTH ADVISORY</h6>
+                    <p id="uv-advice" class="lead">System initializing and stabilizing sensor arrays...</p>
+                </div>
+                <div class="col-md-6">
+                    <canvas id="uvLine" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let uvChart;
+    document.addEventListener('DOMContentLoaded', () => {
+        uvChart = new Chart(document.getElementById('uvLine'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ data: [], borderColor: '#fff', tension: 0.4 }] },
+            options: {
+                plugins: { legend: false },
+                scales: { x: { display: false }, y: { display: false } }
+            }
+        });
+    });
+
+    window.onUpdate = function(d) {
+        const val = d.current.uv_index;
+        document.getElementById('uv-large').innerText = val;
+        
+        let r = 'LOW', c = '#10b981', a = 'Safe to be outside. No special protection needed.';
+        if (val >= 11) { r = 'EXTREME'; c = '#a855f7'; a = 'Avoid being outside during midday. Use maximum protection.'; }
+        else if (val >= 8) { r = 'VERY HIGH'; c = '#ef4444'; a = 'High risk. Minimize sun exposure. Wear sunscreen and hat.'; }
+        else if (val >= 6) { r = 'HIGH'; c = '#f97316'; a = 'Wear protection. Use sunscreen and seek shade.'; }
+        else if (val >= 3) { r = 'MODERATE'; c = '#f59e0b'; a = 'Take precautions. Wear sunscreen and a hat.'; }
+
+        const badge = document.getElementById('uv-risk-badge');
+        badge.innerText = r;
+        badge.style.background = c;
+        badge.style.boxShadow = `0 0 40px ${c}66`;
+        document.getElementById('uv-advice').innerText = a;
+        document.getElementById('uv-main-container').style.boxShadow = `inset 0 0 100px ${c}22`;
+
+        if (d.history.length > 0) {
+            uvChart.data.labels = d.history.map(x => '');
+            uvChart.data.datasets[0].data = d.history.map(x => x.uv_index);
+            uvChart.update('none');
+        }
+    };
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-md-5">
+        <div class="glass-card p-5 text-center h-100 d-flex flex-column justify-content-center overflow-hidden position-relative">
+            <div id="rain-bg" class="position-absolute top-0 start-0 w-100 h-100" style="z-index: 0; opacity: 0.2"></div>
+            <div style="z-index: 1">
+                <h6 class="text-muted fw-bold">RAINFALL PROBABILITY</h6>
+                <div class="display-1 fw-800 text-info mb-4"><span id="p-val">--</span>%</div>
+                <div id="p-meter" class="h4 text-info fw-bold">DRY</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="glass-card p-4">
+            <h6 class="text-muted fw-bold mb-4">INTENSITY HISTORY</h6>
+            <div style="height: 350px;">
+                <canvas id="pHistory"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let pChart;
+    document.addEventListener('DOMContentLoaded', () => {
+        pChart = new Chart(document.getElementById('pHistory'), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ data: [], backgroundColor: 'rgba(56, 189, 248, 0.5)', borderColor: '#38bdf8', borderWidth: 2 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { 
+                    y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                    x: { display: false }
+                },
+                plugins: { legend: false }
+            }
+        });
+
+        // Add CSS rain drops
+        const bg = document.getElementById('rain-bg');
+        for(let i=0; i<30; i++) {
+            let drop = document.createElement('div');
+            drop.className = 'rain-drop';
+            drop.style.left = Math.random() * 100 + '%';
+            drop.style.animationDelay = Math.random() * 2 + 's';
+            drop.style.animationDuration = (Math.random() * 1 + 0.5) + 's';
+            bg.appendChild(drop);
+        }
+    });
+
+    window.onUpdate = function(d) {
+        document.getElementById('p-val').innerText = Math.round(d.current.precipitation);
+        let m = 'DRY';
+        if (d.current.precipitation > 60) m = 'HEAVY';
+        else if (d.current.precipitation > 20) m = 'MODERATE';
+        document.getElementById('p-meter').innerText = m;
+
+        if (d.history.length > 0) {
+            pChart.data.labels = d.history.map(x => '');
+            pChart.data.datasets[0].data = d.history.map(x => x.precipitation);
+            pChart.update('none');
+        }
+    };
+</script>
+<style>
+    .rain-drop {
+        position: absolute;
+        width: 2px; height: 15px;
+        background: #38bdf8;
+        top: -20px;
+        animation: fall linear infinite;
+    }
+    @keyframes fall { to { transform: translateY(500px); } }
+</style>
+{% endblock %}

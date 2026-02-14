@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-5">
+    <div class="col-12 text-center py-5 glass-card">
+        <div id="main-icon-container" class="display-1 mb-4">
+            <i class="bi bi-cloud-sun text-info animate-pulse"></i>
+        </div>
+        <h6 class="text-muted text-uppercase fw-800 mb-3">AI Engine Prediction</h6>
+        <div class="d-inline-block">
+            <span id="main-prediction" class="prediction-badge">Analyzing...</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Temp -->
+    <div class="col-md-3">
+        <div class="glass-card p-4">
+            <h6 class="text-muted fw-bold mb-3">TEMPERATURE</h6>
+            <div class="d-flex justify-content-between align-items-end mb-2">
+                <span id="card-temp" class="h1 mb-0 fw-800">--</span>
+                <span class="text-warning h4 mb-1">°C</span>
+            </div>
+            <div class="custom-progress mb-3">
+                <div id="temp-progress" class="custom-progress-bar" style="width: 0%"></div>
+            </div>
+            <canvas id="tempSpark" height="50"></canvas>
+        </div>
+    </div>
+    <!-- Humidity -->
+    <div class="col-md-3">
+        <div class="glass-card p-4">
+            <h6 class="text-muted fw-bold mb-3">HUMIDITY</h6>
+            <div class="d-flex justify-content-between align-items-end mb-2">
+                <span id="card-hum" class="h1 mb-0 fw-800">--</span>
+                <span class="text-primary h4 mb-1">%</span>
+            </div>
+            <div style="height: 60px; width: 60px; margin: 0 auto;">
+                <canvas id="humRadial"></canvas>
+            </div>
+        </div>
+    </div>
+    <!-- Precipitation -->
+    <div class="col-md-3">
+        <div class="glass-card p-4">
+            <h6 class="text-muted fw-bold mb-3">PRECIPITATION</h6>
+            <div class="d-flex justify-content-between align-items-end mb-2">
+                <span id="card-precip" class="h1 mb-0 fw-800">--</span>
+                <span class="text-info h4 mb-1">%</span>
+            </div>
+            <canvas id="precipBar" height="70"></canvas>
+        </div>
+    </div>
+    <!-- UV -->
+    <div id="uv-card" class="col-md-3">
+        <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between">
+            <h6 class="text-muted fw-bold mb-3">UV INDEX</h6>
+            <div class="text-center py-2">
+                <span id="card-uv" class="display-3 fw-800">--</span>
+            </div>
+            <div id="uv-risk-label" class="text-center small fw-bold p-1 rounded-pill">RISK: --</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let charts = {};
+    const sparkConfig = {
+        type: 'line',
+        options: {
+            plugins: { legend: false, tooltip: false },
+            scales: { x: { display: false }, y: { display: false } },
+            elements: { point: { radius: 0 }, line: { tension: 0.4, borderWidth: 2 } }
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        charts.temp = new Chart(document.getElementById('tempSpark'), { ...sparkConfig, data: { labels: Array(10).fill(''), datasets: [{ data: [], borderColor: '#f59e0b' }] } });
+        charts.precip = new Chart(document.getElementById('precipBar'), { type: 'bar', data: { labels: Array(10).fill(''), datasets: [{ data: [], backgroundColor: '#0ea5e9', borderRadius: 5 }] }, options: sparkConfig.options });
+        charts.hum = new Chart(document.getElementById('humRadial'), {
+            type: 'doughnut',
+            data: { datasets: [{ data: [0, 100], backgroundColor: ['#38bdf8', 'rgba(255,255,255,0.05)'], borderWidth: 0 }] },
+            options: { cutout: '80%', plugins: { legend: false, tooltip: false } }
+        });
+    });
+
+    window.onUpdate = function(d) {
+        document.getElementById('card-temp').innerText = Math.round(d.current.temperature);
+        document.getElementById('card-hum').innerText = Math.round(d.current.humidity);
+        document.getElementById('card-precip').innerText = Math.round(d.current.precipitation);
+        document.getElementById('card-uv').innerText = d.current.uv_index;
+        
+        const pred = d.current.prediction;
+        const badge = document.getElementById('main-prediction');
+        const style = updateColors(pred);
+        badge.innerText = pred;
+        badge.style.background = style.bg;
+        document.getElementById('main-icon-container').innerHTML = `<i class="bi ${style.icon} animate-pulse" style="color: white; text-shadow: 0 0 20px rgba(255,255,255,0.5)"></i>`;
+
+        document.getElementById('temp-progress').style.width = (d.current.temperature / 50 * 100) + '%';
+        
+        // UV Risk Logic
+        let risk = 'LOW', color = '#10b981';
+        if (d.current.uv_index >= 8) { risk = 'EXTREME'; color = '#ef4444'; }
+        else if (d.current.uv_index >= 5) { risk = 'HIGH'; color = '#f97316'; }
+        const riskLabel = document.getElementById('uv-risk-label');
+        riskLabel.innerText = 'RISK: ' + risk;
+        riskLabel.style.background = color + '22';
+        riskLabel.style.color = color;
+        document.getElementById('uv-card').querySelector('.glass-card').style.boxShadow = `0 0 30px ${color}33`;
+
+        if (d.history.length > 0) {
+            const h = d.history.slice(-10);
+            charts.temp.data.datasets[0].data = h.map(x => x.temperature);
+            charts.precip.data.datasets[0].data = h.map(x => x.precipitation);
+            charts.hum.data.datasets[0].data = [d.current.humidity, 100 - d.current.humidity];
+            Object.values(charts).forEach(c => c.update('none'));
+        }
+    };
+</script>
+<style>
+    @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } }
+    .animate-pulse { animation: pulse 4s infinite ease-in-out; display: inline-block; }
+</style>
+{% endblock %}
